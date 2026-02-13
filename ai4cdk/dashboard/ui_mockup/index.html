@@ -465,7 +465,7 @@
                 }
 
                 // Try API first
-                fetch('http://localhost:8000/predict/stage', {
+                fetch('https://ama-ai4cdk.onrender.com/predict/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
