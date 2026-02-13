@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>AI4CKD — UI Mockup</title>
+        <link rel="stylesheet" href="styles.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome.min.css" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    </head>
+    <body>
+        <main class="container">
+            <header class="site-header">
+                <div>
+                    <h1>AI4CKD</h1>
+                    <p class="lead">Prototype — Cartographie & Priorisation CKD</p>
+                </div>
+                <div class="brand-actions">
+                    <span class="la la-heart la-2x" title="AI4CKD"></span>
+                </div>
+            </header>
+
+            <section class="layout">
+                <aside class="sidebar">
+                    <nav class="tabs">
+                        <button class="tab-btn active" data-target="stats"><span class="la la-map"></span> Statistiques</button>
+                        <button class="tab-btn" data-target="predict"><span class="la la-user-md"></span> Prédictions</button>
+                        <button class="tab-btn" data-target="prior"><span class="la la-list-ol"></span> Priorisation</button>
+                    </nav>
+                    <div id="sidebar-info" class="card small">Chargement des données…</div>
+                </aside>
+
+                <section class="content">
+                    <div id="stats" class="panel active">
+                        <div class="panel-grid">
+                            <div class="card kpis">
+                                <h3>Indicateurs nationaux</h3>
+                                <div class="kpi-row">
+                                    <div class="kpi"><div class="kpi-value" id="kpi-patients">—</div><div class="kpi-label">Patients</div></div>
+                                    <div class="kpi"><div class="kpi-value" id="kpi-avgsevere">—%</div><div class="kpi-label">Sévérité moyenne</div></div>
+                                    <div class="kpi"><div class="kpi-value" id="kpi-high">—</div><div class="kpi-label">Départements À Prioriser</div></div>
+                                </div>
+                            </div>
+
+                            <div class="card chart-card">
+                                <h3>Distribution par stade</h3>
+                                <canvas id="chart-stages"></canvas>
+                            </div>
+
+                            <div class="card map-card">
+                                <h3>Carte — Priorisation</h3>
+                                <div id="map-stats" class="map"></div>
+                            </div>
+                            <div class="card" id="dept-card">
+                                <h3>Détails par département</h3>
+                                <label>Sélectionner un département</label>
+                                <select id="dept-select"><option>Tous</option></select>
+                                <div id="dept-details" style="margin-top:10px;display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="predict" class="panel">
+                        <div class="card form-card">
+                            <h3>Prédiction individuelle</h3>
+                            <form id="predict-form">
+                                <div class="row">
+                                    <label>Âge <input type="number" id="p-age" value="50" min="1" max="120" /></label>
+                                    <label>Sexe
+                                        <select id="p-sexe"><option value="M">M</option><option value="F">F</option></select>
+                                    </label>
+                                </div>
+                                <div class="row">
+                                    <label>Poids (kg) <input id="p-poids" type="number" value="70" step="0.1" /></label>
+                                    <label>Taille (m) <input id="p-taille" type="number" value="1.7" step="0.01" /></label>
+                                </div>
+                                <div class="row">
+                                    <label>Créatinine (mg/L) <input id="p-creat" type="number" value="12" step="0.1" /></label>
+                                    <label>Protéinurie 24h (g/24h) <input id="p-prot" type="number" value="0" step="0.1" /></label>
+                                </div>
+                                <div class="row">
+                                    <label>Diabète <input id="p-diab" type="checkbox" /></label>
+                                    <label>HTA <input id="p-hta" type="checkbox" /></label>
+                                </div>
+                                <div class="row">
+                                    <label>Hb (g/dL) <input id="p-hb" type="number" value="12" step="0.1" /></label>
+                                    <label>Urée (g/L) <input id="p-uree" type="number" value="0.5" step="0.01" /></label>
+                                </div>
+                                <div class="row">
+                                    <label>Potassium (meq/L) <input id="p-k" type="number" value="4.2" step="0.1" /></label>
+                                </div>
+                                <div class="actions"><button id="btn-predict" type="button">Calculer</button></div>
+                            </form>
+                        </div>
+
+                        <div id="predict-result" class="card" style="display:none;">
+                            <h3>Résultat</h3>
+                                <div id="predict-result-grid" class="predict-result-grid">
+                                    <div class="predict-left">
+                                        <div class="metric"><span class="label"><span class="la la-heartbeat"></span> eGFR</span><div id="res-egfr" class="value">—</div></div>
+                                        <div class="metric"><span class="label"><span class="la la-robot"></span>span> Stade IA</span><div id="res-stage" class="value">—</div></div>
+                                        <div class="metric"><span class="label"><span class="la la-stethoscope"></span> SR-IRC</span><div id="res-sr" class="value">—</div></div>
+                                        <div id="predict-reco" class="recommendation"></div>
+                                    </div>
+                                    <div class="predict-right">
+                                        <canvas id="predict-pie" width="200" height="200"></canvas>
+                                    </div>
+                                </div>
+                                <div class="actions" style="margin-top: 15px; text-align: right;">
+                                    <button id="btn-show-add-form" type="button" style="display:none;">Ajouter un patient</button>
+                                </div>
+                                
+                                <div id="add-patient-form-section" class="card" style="display:none; margin-top: 15px; border: 1px dashed #ccc;">
+                                    <h4>Détails additionnels du patient</h4>
+                                    <div class="row">
+                                        <label>Département
+                                            <select id="p-dept">
+                                                <option value="ATLANTIQUE">ATLANTIQUE</option>
+                                                <option value="LITTORAL">LITTORAL</option>
+                                                <option value="OUEME">OUEME</option>
+                                                <option value="BORGOU">BORGOU</option>
+                                                <option value="ZOU">ZOU</option>
+                                                <option value="MONO">MONO</option>
+                                                <option value="COUFFO">COUFFO</option>
+                                                <option value="ATACORA">ATACORA</option>
+                                                <option value="DONGA">DONGA</option>
+                                                <option value="ALIBORI">ALIBORI</option>
+                                                <option value="PLATEAU">PLATEAU</option>
+                                                <option value="COLLINES">COLLINES</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                    <div class="actions">
+                                        <button id="btn-confirm-add" type="button">Confirmer l'ajout</button>
+                                    </div>
+                                </div>
+                                <div id="predict-detail" class="predict-detail" style="margin-top:12px;display:none;"></div>
+                            </div> 
+                        </div> 
+                    </div> 
+
+                    <div id="prior" class="panel">
+                        <div class="card prior-card">
+                            <h3>Priorisation patients</h3>
+                            <div class="row">
+                                <label>ID patient <input id="search-id" type="text" placeholder="Ex: 227" /></label>
+                                <button id="btn-search" type="button">Rechercher</button>
+                            </div>
+                            <div class="row" style="margin-top:10px;gap:10px;align-items:center;">
+                                <label>Afficher top <input id="top-n" type="number" min="5" max="200" value="20" style="width:90px" /></label>
+                                <label>Filtrer risque <select id="risk-filter"><option>Tous</option></select></label>
+                                <label>Âge min <input id="min-age" type="number" min="0" max="120" value="0" style="width:90px" /></label>
+                                <label><input id="show-map-toggle" type="checkbox" checked /> Afficher carte</label>
+                            </div>
+                            <div id="patient-card" class="patient-card" style="display:none;margin-top:10px;"></div>
+                            <div class="card" style="margin-top:10px">
+                                <h4>Répartition par niveau de risque</h4>
+                                <canvas id="prior-bar" height="120"></canvas>
+                            </div>
+                            <div class="card" style="margin-top:10px">
+                                <h4>Liste patients (triée)</h4>
+                                <div id="prior-table"></div>
+                                <a id="download-csv" class="secondary" href="#" download="patients_priorises.csv" style="display:inline-block;margin-top:8px">Télécharger CSV</a>
+                            </div>
+                            <div id="map-prior" class="map small" style="margin-top:12px"></div>
+                        </div>
+                    </div>
+                </section>
+            </section>
+        </main>
+
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        // Minimal front-end logic porting key computations from src/prognosis.py
+        function normalize(s){ if(!s) return ''; return s.toString().normalize('NFKD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim(); }
+
+        function calculate_egfr_2021(age, sexe, creat_mg_l){
+            if(!creat_mg_l || creat_mg_l <= 0) return 0;
+            let scr = creat_mg_l / 10.0;
+            let kappa = (String(sexe).toUpperCase().includes('F'))?0.7:0.9;
+            let alpha = (String(sexe).toUpperCase().includes('F'))?-0.241:-0.302;
+            let sex_factor = (String(sexe).toUpperCase().includes('F'))?1.012:1.0;
+            let egfr = 142 * Math.pow(Math.min(scr/kappa,1), alpha) * Math.pow(Math.max(scr/kappa,1), -1.200) * Math.pow(0.9938, age) * sex_factor;
+            return egfr;
+        }
+
+        function categorize_proteinuria(val){ if(val>3) return '>3'; if(val>1) return ']1;2]'; return '≤1'; }
+
+        function calculate_sr_irc_score(age, sexe, egfr, proteinurie_cat, diabete, hta, hb){
+            let score=0;
+            if(egfr<15) score+=20; else if(egfr<30) score+=15; else if(egfr<45) score+=10; else if(egfr<60) score+=5;
+            if(age>75) score+=6; else if(age>=65) score+=4; else if(age>=50) score+=2;
+            if(String(sexe).toUpperCase().includes('M')) score+=1;
+            if(proteinurie_cat=='>3') score+=8; else if(proteinurie_cat==']1;2]') score+=4;
+            if(diabete) score+=3; if(hta) score+=2; if(hb<11) score+=3;
+            return score;
+        }
+
+        function interpret_sr_irc_risk(score){
+            if(score>40) return ['Imminent','🔴','Dialyse proche','Hospitalisation / Urgence Néphrologique'];
+            if(score>=31) return ['Très élevé','🔴','Préparation dialyse','Suivi mensuel / Mise en place abord vasculaire'];
+            if(score>=21) return ['Élevé','🟠','Suivi trimestriel','Consultation néphrologique spécialisée'];
+            if(score>=11) return ['Modéré','🟡','Contrôle semestriel','Surveillance biologique régulière'];
+            return ['Faible','🟢','Contrôle annuel','Mesures de néphroprotection standard'];
+        }
+
+        // Load data and initialize maps
+        let geoData=null, ckdData=null, patients=null;
+        let mapStats = null, mapPrior = null;
+        let geoLayerStats = null, geoLayerPrior = null; // Track current highlighting layers
+        let currentMarker = null; // Track current search/selection marker
+
+        function initMaps() {
+            if (!mapStats && document.getElementById('map-stats')) {
+                mapStats = L.map('map-stats', { zoomControl: false }).setView([9.5, 2.3], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(mapStats);
+            }
+            if (!mapPrior && document.getElementById('map-prior')) {
+                mapPrior = L.map('map-prior', { zoomControl: false }).setView([9.5, 2.3], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(mapPrior);
+                
+                // Initial layer for mapPrior
+                fetch('./data/benin.geojson').then(r=>r.json()).then(geo=>{
+                    L.geoJSON(geo, {
+                        style: {color:'#10B981',fillColor:'#10B981',fillOpacity:0.1,weight:0.5}
+                    }).addTo(mapPrior);
+                });
+            }
+        }
+
+        // Try multiple candidate paths when serving from different servers
+        async function fetchJsonTry(paths){
+            for(const p of paths){
+                try{
+                    const r = await fetch(p);
+                    if(!r.ok) continue;
+                    const j = await r.json();
+                    return j;
+                }catch(e){ continue; }
+            }
+            return null;
+        }
+
+        async function loadAll(){
+            const geoPaths = ['./data/benin.geojson', '../src/benin.geojson'];
+            const ckdPaths = ['./data/ckd_data_clean.json', '../src/ckd_data_clean.json'];
+            const patPaths = ['./data/patients_sr_irc.json', '../src/patients_sr_irc.json'];
+            const [g,c,p] = await Promise.all([
+                fetchJsonTry(geoPaths),
+                fetchJsonTry(ckdPaths),
+                fetchJsonTry(patPaths)
+            ]);
+            geoData = g; ckdData = c; patients = p;
+            document.getElementById('sidebar-info').innerText = (ckdData? 'Données CKD chargées' : 'Données CKD manquantes') + (patients? ' • Patients OK' : '');
+            renderStats();
+            renderPriorControls();
+        }
+
+
+        function colorForSeverity(v){
+            if(v===null||v===undefined) return '#94a3b8';
+            if(v>=60) return '#b91c1c';
+            if(v>=40) return '#f97316';
+            if(v>=20) return '#f59e0b';
+            if(v>0) return '#10b981';
+            return '#e6eef8';
+        }
+
+        function renderStats(){
+            if(!geoData||!ckdData) return;
+            const deps = ckdData.departments || {};
+            // KPIs
+            const totalPatients = (ckdData.metadata && ckdData.metadata.total_patients_national) || Object.values(deps).reduce((s,v)=>s+(v.total_patients||0),0);
+            document.getElementById('kpi-patients').innerText = totalPatients;
+            const vals = Object.values(deps).map(d=>Number(d.severity_rate||0));
+            const avg = Math.round((vals.reduce((a,b)=>a+b,0)/Math.max(1,vals.length))*10)/10;
+            document.getElementById('kpi-avgsevere').innerText = avg + '%';
+            document.getElementById('kpi-high').innerText = Object.values(deps).filter(d=>d.severity_rate>30).length;
+
+            // choropleth on mapStats colored by severity_rate
+            if(geoLayerStats) mapStats.removeLayer(geoLayerStats);
+            geoLayerStats = L.geoJSON(geoData, {
+                style:function(feat){
+                    const name = (feat.properties.shapeName||feat.properties.name||'').toString().toUpperCase().trim();
+                    const info = deps[name] || null;
+                    const sev = info? Number(info.severity_rate || 0) : null;
+                    return {color:'#ffffff', fillColor: colorForSeverity(sev), fillOpacity:0.85, weight:0.6};
+                },
+                onEachFeature:function(feat,layer){
+                    const nameRaw = feat.properties.shapeName || feat.properties.name || '—';
+                    const nameKey = nameRaw.toString().toUpperCase().trim();
+                    const info = deps[nameKey] || null;
+                    const tp = info? (info.total_patients || 0) : '—';
+                    const sev = info? (info.severity_rate || '—') : '—';
+                    layer.bindTooltip(`<strong>${nameRaw}</strong><br/>Patients: ${tp}<br/>Sévérité: ${sev}%`, {sticky:true});
+                    layer.on('click', ()=>{ showDeptDetails(nameKey, nameRaw); });
+                }
+            }).addTo(mapStats);
+            try{ mapStats.fitBounds(geoLayerStats.getBounds(), {padding:[20,20]}); }catch(e){}
+
+            // Department selector population and details card
+            function showDeptDetails(key, displayName){
+                const el = document.getElementById('dept-details');
+                const info = deps[key] || {};
+                const spc = info.spc || 0;
+                const sev = info.severity_rate || 0;
+                const patients_n = info.total_patients || 0;
+                const sd = info.stage_distribution || {};
+                const g12 = sd['G1-G2']||0; const g3 = sd['G3']||0; const g45 = sd['G4-G5']||0;
+                const totalStages = g12 + g3 + g45 || 1;
+                const pct = n => Math.round((n/totalStages)*100);
+                el.style.display = 'block';
+                el.innerHTML = `
+                    <div class="dept-card">
+                        <div class="dept-header"><h2>${displayName}</h2><div class="badge">${spc} pts SPC</div></div>
+                        <div class="dept-stats">
+                            <div class="stat"><div class="stat-value">${patients_n}</div><div class="stat-label">File active</div></div>
+                            <div class="stat"><div class="stat-value large">${sev}%</div><div class="stat-label">Sévérité</div></div>
+                        </div>
+                        <div class="stage-dist">
+                            <h4>DISTRIBUTION PAR GRADE (IRC)</h4>
+                            <div class="stage-row"><div>G1–G2</div><div class="right">${g12} pers. • ${pct(g12)}%</div><div class="progress"><div class="progress-bar" style="width:${pct(g12)}%"></div></div></div>
+                            <div class="stage-row"><div>G3</div><div class="right">${g3} pers. • ${pct(g3)}%</div><div class="progress"><div class="progress-bar" style="width:${pct(g3)}%"></div></div></div>
+                            <div class="stage-row"><div>G4–G5</div><div class="right">${g45} pers. • ${pct(g45)}%</div><div class="progress"><div class="progress-bar" style="width:${pct(g45)}%"></div></div></div>
+                        </div>
+                    </div>
+                `;
+                // set selector value if present
+                try{ const selEl = document.getElementById('dept-select'); if(selEl) selEl.value = key; }catch(e){}
+                // Highlight department on mapStats
+                if(geoLayerStats) mapStats.removeLayer(geoLayerStats);
+                geoLayerStats = L.geoJSON(geoData, {
+                    style:function(feat){
+                        const nm = (feat.properties.shapeName||feat.properties.name||'').toString().toUpperCase().trim();
+                        const info2 = deps[nm] || null;
+                        const sev2 = info2? Number(info2.severity_rate || 0) : null;
+                        if(nm === key) return {color:'#D97706', fillColor:'#FDE68A', fillOpacity:0.95, weight:1.6};
+                        return {color:'#ffffff', fillColor: colorForSeverity(sev2), fillOpacity:0.85, weight:0.6};
+                    },
+                    onEachFeature:function(feat,layer){ layer.bindTooltip(feat.properties.shapeName||feat.properties.name||'—'); }
+                }).addTo(mapStats);
+                try{ mapStats.fitBounds(geoLayerStats.getBounds(), {padding:[20,20]}); }catch(e){}
+            }
+
+            // populate selector
+            const sel = document.getElementById('dept-select');
+            sel.innerHTML = '';
+            const keys = Object.keys(deps).sort();
+            keys.forEach(k=>{ const opt = document.createElement('option'); opt.value = k; opt.text = k; sel.appendChild(opt); });
+            // default to LITTORAL if available
+            const defaultKey = keys.includes('LITTORAL')? 'LITTORAL' : (keys[0]||'');
+            if(defaultKey) { sel.value = defaultKey; showDeptDetails(defaultKey, defaultKey); }
+            sel.addEventListener('change', ()=>{ const v = sel.value; showDeptDetails(v, v); });
+
+            // chart for stages (aggregate)
+            const stageCounts = {'G1-G2':0,'G3':0,'G4-G5':0};
+            Object.values(deps).forEach(d=>{ const sd=d.stage_distribution||{}; stageCounts['G1-G2']+=sd['G1-G2']||0; stageCounts['G3']+=sd['G3']||0; stageCounts['G4-G5']+=sd['G4-G5']||0; });
+            const ctx = document.getElementById('chart-stages').getContext('2d');
+            if(window._chartStages) window._chartStages.destroy();
+            window._chartStages = new Chart(ctx,{type:'doughnut',data:{labels:Object.keys(stageCounts),datasets:[{data:Object.values(stageCounts),backgroundColor:['#60A5FA','#F59E0B','#EF4444']}]},options:{plugins:{legend:{position:'bottom'}}}});
+        }
+
+        // Prediction button
+        document.addEventListener('DOMContentLoaded',()=>{
+            initMaps();
+            loadAll();
+            document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>{
+                document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); 
+                b.classList.add('active'); 
+                document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); 
+                const target = document.getElementById(b.dataset.target);
+                target.classList.add('active');
+                
+                // Force map redraw when tab becomes visible
+                if(b.dataset.target === 'stats' && mapStats) setTimeout(()=>mapStats.invalidateSize(), 100);
+                if(b.dataset.target === 'prior' && mapPrior) setTimeout(()=>mapPrior.invalidateSize(), 100);
+            }));
+
+            document.getElementById('btn-predict').addEventListener('click',()=>{
+                const age=Number(document.getElementById('p-age').value);
+                const sexe=document.getElementById('p-sexe').value;
+                const poids=Number(document.getElementById('p-poids').value);
+                const taille=Number(document.getElementById('p-taille').value);
+                const creat=Number(document.getElementById('p-creat').value);
+                const prot=Number(document.getElementById('p-prot').value);
+                const diab=document.getElementById('p-diab').checked;
+                const hta=document.getElementById('p-hta').checked;
+                const hb=Number(document.getElementById('p-hb').value);
+                const uree=Number(document.getElementById('p-uree').value || 0.5);
+                const k=Number(document.getElementById('p-k').value||0);
+                
+                const egfr = calculate_egfr_2021(age,sexe,creat);
+                const prot_cat = categorize_proteinuria(prot);
+                const sr = calculate_sr_irc_score(age,sexe,egfr,prot_cat,diab,hta,hb);
+                const interp = interpret_sr_irc_risk(sr);
+
+                // Build components for pie and details breakdown
+                const compLabels=[]; const compVals=[]; const compList = [];
+                if(egfr<15){compLabels.push('eGFR<15'); compVals.push(20); compList.push('eGFR < 15 mL/min');} 
+                else if(egfr<30){compLabels.push('eGFR15-30'); compVals.push(15); compList.push('eGFR 15–30');} 
+                else if(egfr<45){compLabels.push('eGFR30-45'); compVals.push(10); compList.push('eGFR 30–45');} 
+                else if(egfr<60){compLabels.push('eGFR45-60'); compVals.push(5); compList.push('eGFR 45–60');} 
+                
+                if(age>75){compLabels.push('Age>75'); compVals.push(6); compList.push('Age > 75');} 
+                else if(age>=65){compLabels.push('Age65-75'); compVals.push(4); compList.push('Age 65–75');} 
+                else if(age>=50){compLabels.push('Age50-64'); compVals.push(2); compList.push('Age 50–64');} 
+                
+                if(sexe=='M'){compLabels.push('Homme'); compVals.push(1); compList.push('Sexe: Homme');} 
+                else { compList.push('Sexe: Femme'); }
+                
+                if(prot_cat=='>3'){compLabels.push('Prot>3'); compVals.push(8); compList.push('Protéinurie > 3 g/24h');} 
+                else if(prot_cat==']1;2]'){compLabels.push('Prot1-3'); compVals.push(4); compList.push('Protéinurie 1–3 g/24h');} 
+                else { compList.push('Protéinurie ≤ 1 g/24h'); }
+                
+                if(diab){compLabels.push('Diabète'); compVals.push(3); compList.push('Diabète: Oui');} 
+                if(hta){compLabels.push('HTA'); compVals.push(2); compList.push('HTA: Oui');} 
+                if(hb<11){compLabels.push('Anémie'); compVals.push(3); compList.push('Hb < 11 g/dL');}
+
+                const payload = {
+                    age: age, sexe: sexe, poids: poids, taille: taille,
+                    creatinine: creat, uree: uree, hb: hb, k: k
+                };
+
+                // Create updateUI function for both local and API results
+                function updateUI(egfrVal, srVal, stageLabel, riskCategory) {
+                    document.getElementById('res-egfr').innerText = Number(egfrVal).toFixed(2)+ ' mL/min';
+                    document.getElementById('res-stage').innerText = stageLabel || '—';
+                    document.getElementById('res-sr').innerText = srVal + ' pts (' + (riskCategory || stageLabel) + ')';
+                    document.getElementById('predict-reco').innerHTML = `<div class="recommendation"><span class="la la-notes-medical"></span> ${interp[3]}</div>`;
+
+                    const pieCtx = document.getElementById('predict-pie').getContext('2d'); 
+                    if(window._predictPie) window._predictPie.destroy(); 
+                    window._predictPie = new Chart(pieCtx,{type:'pie',data:{labels:compLabels,datasets:[{data:compVals,backgroundColor:['#ef4444','#f59e0b','#10b981','#60a5fa','#8b5cf6','#f472b6','#34d399']}]},options:{plugins:{legend:{position:'right'}}}});
+
+                    const det = document.getElementById('predict-detail');
+                    det.style.display = 'block';
+                    det.innerHTML = `
+                        <div class="detail-grid">
+                            <div class="detail-col">
+                                <div class="detail-row"><strong><span class="la la-user"></span> Patient</strong><div>${age} ans • ${sexe}</div></div>
+                                <div class="detail-row"><strong><span class="la la-weight"></span> Poids / Taille</strong><div>${poids} kg • ${taille} m</div></div>
+                                <div class="detail-row"><strong><span class="la la-vial"></span> Créatinine</strong><div>${creat} mg/L</div></div>
+                                <div class="detail-row"><strong><span class="la la-prescription"></span> Protéinurie</strong><div>${prot} g/24h (${prot_cat})</div></div>
+                            </div>
+                            <div class="detail-col">
+                                <div class="detail-row"><strong><span class="la la-heart"></span> eGFR</strong><div>${Number(egfrVal).toFixed(2)} mL/min</div></div>
+                                <div class="detail-row"><strong><span class="la la-briefcase-medical"></span> Score</strong><div>${srVal} pts — ${riskCategory || stageLabel}</div></div>
+                                <div class="detail-row"><strong><span class="la la-thermometer-full"></span> Hb / K</strong><div>${hb} g/dL • ${k} meq/L</div></div>
+                                <div class="detail-row"><strong><span class="la la-notes-medical"></span> Recommandation</strong><div>${interp[3]}</div></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:8px"><strong>Composants du score:</strong><ul>${compList.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+                    `;
+
+                    document.getElementById('predict-result').style.display='block';
+                    document.getElementById('btn-show-add-form').style.display='inline-block';
+                    
+                    window._lastPrediction = {
+                        age: age, sexe: sexe, poids: poids, taille: taille,
+                        egfr: egfrVal, sr_irc_score: srVal,
+                        sr_irc_risk_level: riskCategory || interp[0],
+                        proteinurie_24h: prot, hb: hb, k: k, priorite: srVal
+                    };
+                }
+
+                // Try API first
+                fetch('http://localhost:8000/predict/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if(res.success && res.data) {
+                        const d = res.data;
+                        updateUI(d.calculated_indicators.eDFG, d.risk_score, d.predicted_stage, d.risk_category);
+                    } else {
+                        throw new Error('API returned failure');
+                    }
+                })
+                .catch(err => {
+                    console.warn('API error, falling back to local logic:', err);
+                    updateUI(egfr, sr, interp[0], null);
+                });
+            });
+
+            // Logic for showing the add form
+            document.getElementById('btn-show-add-form').addEventListener('click', () => {
+                const formSection = document.getElementById('add-patient-form-section');
+                formSection.style.display = formSection.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // Logic for confirming the addition
+            document.getElementById('btn-confirm-add').addEventListener('click', async () => {
+                if(!window._lastPrediction) return;
+                
+                const dept = document.getElementById('p-dept').value;
+                
+                // Calculer l'ID : Max ID actuel + 1 (en ignorant les non-numériques)
+                let nextId = 1;
+                if (patients && patients.length > 0) {
+                    const ids = patients.map(p => {
+                        const val = parseInt(p.id_patient);
+                        return isNaN(val) ? 0 : val;
+                    });
+                    nextId = Math.max(...ids) + 1;
+                }
+
+                const newPatient = {
+                    ...window._lastPrediction,
+                    id_patient: nextId,
+                    departement: dept
+                };
+                
+                // In a static HTML mockup, we can't save to a local JSON file directly via JS.
+                // However, we can update the in-memory 'patients' array so it reflects in the 'Priorisation' tab.
+                if(!patients) patients = [];
+                patients.push(newPatient);
+                
+                alert(`Patient ${newPatient.id_patient} ajouté à la liste locale (mémoire). Note: Cette modification ne sera pas sauvegardée dans le fichier JSON physique car nous sommes dans un environnement statique.`);
+                
+                // Refresh the priorisation table
+                if(typeof updatePriorTable === 'function') updatePriorTable();
+                if(typeof renderPriorBar === 'function') renderPriorBar();
+                
+                // Reset and hide add form
+                document.getElementById('add-patient-form-section').style.display = 'none';
+                document.getElementById('btn-show-add-form').style.display = 'none';
+            });
+
+            function selectPatient(p) {
+                if(!p) return;
+                const card = document.getElementById('patient-card');
+                card.style.display='block'; 
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4>Patient ${p.id_patient}</h4>
+                        <span class="badge" style="background:${p.sr_irc_risk_color || '#ccc'}">${p.sr_irc_risk_level || '—'}</span>
+                    </div>
+                    <p><strong>Département:</strong> ${p.departement||'—'}</p>
+                    <p><strong>Âge / Sexe:</strong> ${p.age||'—'} ans • ${p.sexe||'—'}</p>
+                    <p><strong>eGFR:</strong> ${Number(p.egfr||0).toFixed(2)} • <strong>SR-IRC:</strong> ${p.sr_irc_score||'—'} pts</p>
+                `;
+                
+                if(!geoData || !mapPrior) return;
+                
+                // Clear previous highlights
+                if(geoLayerPrior) mapPrior.removeLayer(geoLayerPrior);
+                if(currentMarker) mapPrior.removeLayer(currentMarker);
+                
+                const targetDept = normalize(p.departement);
+                
+                geoLayerPrior = L.geoJSON(geoData, {
+                    style: function(feat){
+                        let nm=normalize(feat.properties.shapeName||feat.properties.name||feat.properties.NOM||feat.properties.DEPARTEMENT); 
+                        if(nm === targetDept) return {fillColor:'#FBBF24',color:'#D97706',fillOpacity:0.7,weight:2.0}; 
+                        return {fillColor:'transparent', color:'transparent', weight:0}; // Hidden layer for non-target
+                    }
+                }).addTo(mapPrior);
+                
+                // Find centroid and zoom
+                for(const f of geoData.features){ 
+                    let nm=normalize(f.properties.shapeName||f.properties.name||f.properties.NOM||f.properties.DEPARTEMENT); 
+                    if(nm === targetDept){ 
+                        let coords = f.geometry.type==='Polygon'?f.geometry.coordinates[0]:(f.geometry.coordinates[0][0]||[]); 
+                        let lats=coords.map(pt=>pt[1]); 
+                        let lons=coords.map(pt=>pt[0]); 
+                        let lat=lats.reduce((a,b)=>a+b,0)/lats.length; 
+                        let lon=lons.reduce((a,b)=>a+b,0)/lons.length; 
+                        
+                        mapPrior.setView([lat,lon], 9); 
+                        currentMarker = L.marker([lat,lon],{
+                            icon:L.icon({iconUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',iconSize:[25,41],iconAnchor:[12,41]})
+                        }).addTo(mapPrior).bindTooltip(`Patient ${p.id_patient}`).openTooltip(); 
+                        break; 
+                    } 
+                }
+            }
+
+            // Priorisation lookup
+            document.getElementById('btn-search').addEventListener('click',()=>{
+                const id=document.getElementById('search-id').value.trim();
+                if(!patients){ alert('Données patients non chargées'); return; }
+                const p = patients.find(x=>String(x.id_patient)===String(id));
+                if(!p){ 
+                    document.getElementById('patient-card').style.display='block'; 
+                    document.getElementById('patient-card').innerHTML='<div class="warn">Patient non trouvé</div>'; 
+                    return; 
+                }
+                selectPatient(p);
+            });
+
+            // Also render patients list / chart on load when patients available
+            function renderPriorControls(){
+                if(!patients) return;
+                // build risk filter options
+                const riskFilter = document.getElementById('risk-filter');
+                const uniqueRisks = Array.from(new Set(patients.map(p=>p.sr_irc_risk_level).filter(Boolean)));
+                riskFilter.innerHTML = '<option>Tous</option>' + uniqueRisks.map(r=>`<option>${r}</option>`).join('');
+                
+                document.getElementById('top-n').addEventListener('change', updatePriorTable);
+                document.getElementById('min-age').addEventListener('change', updatePriorTable);
+                document.getElementById('risk-filter').addEventListener('change', updatePriorTable);
+                document.getElementById('show-map-toggle').addEventListener('change', function(){ 
+                    const mp = document.getElementById('map-prior');
+                    mp.style.display = this.checked? 'block':'none'; 
+                    if(this.checked){ setTimeout(()=>{ if(mapPrior) mapPrior.invalidateSize(); },200); }
+                });
+                updatePriorTable();
+                renderPriorBar();
+            }
+
+            function updatePriorTable(){
+                const topN = Number(document.getElementById('top-n').value) || 20;
+                const minAge = Number(document.getElementById('min-age').value) || 0;
+                const rf = document.getElementById('risk-filter').value;
+                let rows = patients.slice();
+                rows = rows.filter(r=> (r.age||0) >= minAge);
+                if(rf && rf !== 'Tous') rows = rows.filter(r=> r.sr_irc_risk_level === rf);
+                
+                rows.forEach(r=>{ if(r.priorite===undefined) r.priorite = (r.sr_irc_score||0); });
+                rows.sort((a,b)=> (b.priorite||0) - (a.priorite||0));
+                
+                const tableDiv = document.getElementById('prior-table');
+                let html = `
+                    <table style="width:100%; border-collapse:collapse; cursor:pointer;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="text-align:left; padding:8px; border-bottom:2px solid #edf2f7;">ID</th>
+                                <th style="text-align:left; padding:8px; border-bottom:2px solid #edf2f7;">Score</th>
+                                <th style="text-align:left; padding:8px; border-bottom:2px solid #edf2f7;">Niveau</th>
+                                <th style="text-align:left; padding:8px; border-bottom:2px solid #edf2f7;">Département</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                for(let i=0; i<Math.min(topN, rows.length); i++){
+                    const r = rows[i];
+                    html += `
+                        <tr class="patient-row" data-id="${r.id_patient}" style="border-bottom:1px solid #f1f5f9; transition: background 0.2s;">
+                            <td style="padding:8px;">${r.id_patient}</td>
+                            <td style="padding:8px; font-weight:700;">${r.sr_irc_score}</td>
+                            <td style="padding:8px;"><span style="color:${r.sr_irc_risk_color}">${r.sr_irc_risk_level}</span></td>
+                            <td style="padding:8px; font-size:12px;">${r.departement}</td>
+                        </tr>
+                    `;
+                }
+                html += '</tbody></table>';
+                tableDiv.innerHTML = html;
+                
+                // Add click events to rows
+                document.querySelectorAll('.patient-row').forEach(row => {
+                    row.addEventListener('click', () => {
+                        const id = row.dataset.id;
+                        const p = patients.find(x => String(x.id_patient) === String(id));
+                        selectPatient(p);
+                        
+                        // Visual feedback for selection
+                        document.querySelectorAll('.patient-row').forEach(r => r.style.background = 'transparent');
+                        row.style.background = '#fef3c7';
+                    });
+                });
+
+                // CSV
+                const cols = ['id_patient','age','sexe','egfr','proteinurie_24h','sr_irc_score','sr_irc_risk_level','priorite','departement'];
+                const csv = [cols.join(',')].concat(rows.map(r=> cols.map(c=> JSON.stringify(r[c]===undefined?'':r[c])).join(','))).join('\n');
+                const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+                const url = URL.createObjectURL(blob);
+                document.getElementById('download-csv').href = url;
+            }
+
+            function renderPriorBar(){
+                if(!patients) return;
+                const vc = {};
+                patients.forEach(p=>{ const k = p.sr_irc_risk_level || 'Unknown'; vc[k] = (vc[k]||0) + 1; });
+                const labels = Object.keys(vc);
+                const data = labels.map(l=>vc[l]);
+                const ctx = document.getElementById('prior-bar').getContext('2d');
+                if(window._priorBar) window._priorBar.destroy();
+                window._priorBar = new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Patients',data:data,backgroundColor:'#10B981'}]},options:{plugins:{legend:{display:false}}}});
+            }
+
+            // ensure prior controls updated when patients loaded
+            // attempt to call with small timeout in case loadAll finished earlier
+            setTimeout(()=>{ renderPriorControls(); if(document.getElementById('map-prior') && document.getElementById('map-prior').style.display !== 'none'){ try{ mapPrior.invalidateSize(); }catch(e){} } }, 800);
+        });
+        </script>
+    </body>
+</html>
