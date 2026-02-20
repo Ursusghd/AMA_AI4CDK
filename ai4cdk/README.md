@@ -1,63 +1,99 @@
-# AI4CKD - Prédiction et Cartographie de la Maladie Rénale Chronique
+# AI4CKD - Intelligence Artificielle au Service de la Santé Rénale
 
-AI4CKD est une application web conçue pour aider au dépistage, à la prédiction et à la priorisation des patients atteints de Maladie Rénale Chronique (CKD). Le projet combine une API de prédiction basée sur le Machine Learning et une interface web interactive.
+![AI4CKD Banner](https://img.shields.io/badge/Status-Prototype-blue.svg) ![Hackathon](https://img.shields.io/badge/Hackathon-IA_Bénin_2025-green.svg)
 
-## Fonctionnalités
-- **Prédiction Individuelle** : Calcul de l'eDFG et prédiction du stade CKD via un modèle XGBoost.
-- **Score de Risque SR-IRC** : Évaluation du risque de progression vers l'insuffisance rénale.
-- **Cartographie** : Visualisation de la prévalence et de la sévérité par département.
-- **Priorisation** : Liste triée des patients nécessitant une attention urgente.
+**AI4CKD** est un système expert conçu pour la détection précoce, la classification et la priorisation des patients atteints de **Maladie Rénale Chronique (CKD)** au Bénin.
 
-## Installation et Lancement
+---
 
-### 1. Prérequis
-- Python 3.10 ou supérieur
-- Accès internet (pour le chargement des bibliothèques cartographiques CDN)
+## 🚀 Vue d'Ensemble
 
-### 2. Configuration de l'environnement
-Le projet utilise un environnement virtuel (`venv`) pour isoler les dépendances.
+Le projet combine une API de prédiction robuste (Backend) et une interface de pilotage intuitive (Frontend) pour offrir aux cliniciens :
+- **Prédiction de Stade** : Identification du stade DFG (G1 à G5) via un algorithme de Gradient Boosting (XGBoost).
+- **Score Clinique SR-IRC** : Un barème de 0 à 40+ évaluant instantanément l'urgence médicale.
+- **Visualisation Géo-sanitaire** : Cartographie dynamique de la sévérité par département pour l'aide à la décision publique.
+
+---
+
+## 🏗️ Architecture Technique
+
+```mermaid
+graph TD
+    UI[Frontend: Dashboard HTML/JS]
+    API[Backend: FastAPI Python]
+    ML[ML Engine: Scikit-learn/XGBoost]
+    DB[(SQLite: Persistance)]
+    
+    UI <-->|JSON/HTTP Port 8080| API
+    API <--> ML
+    API <--> DB
+```
+
+### Stack Technologique
+- **Backend** : FastAPI, Pydantic, SQLAlchemy.
+- **IA** : XGBoost, CatBoost (Stacking Pipeline), Joblib.
+- **Frontend** : Vanilla JS, CSS3, Leaflet.js (Cartographie), Chart.js (Visualisation).
+
+---
+
+## 📊 Score Clinique SR-IRC
+
+Le système implémente un score de risque de progression (SR-IRC) calculé selon les paramètres cliniques :
+
+| Score | Niveau de Risque | Recommandation Clinique |
+| :--- | :--- | :--- |
+| **> 40** | 🔴 **Imminent** | Hospitalisation / Urgence Néphrologique |
+| **31 - 40** | 🔴 **Très élevé** | Préparation dialyse / Suivi mensuel |
+| **21 - 30** | 🟠 **Élevé** | Suivi trimestriel spécialisé |
+| **11 - 20** | 🟡 **Modéré** | Surveillance biologique semestrielle |
+| **0 - 10** | 🟢 **Faible** | Mesures de néphroprotection standard |
+
+---
+
+## 🛠️ Installation et Lancement Local
+
+Suivez ces étapes pour exécuter le projet sur votre machine.
+
+### 1. Installation des dépendances
 ```powershell
-# Création et activation de l'environnement (déjà fait lors du setup initial)
 python -m venv venv
 .\venv\Scripts\activate
-
-# Installation des dépendances
 pip install -r requirements.txt
 ```
 
-### 3. Lancement du Backend (API)
-L'API doit être lancée en premier car elle fournit les services de prédiction au Dashboard.
-```powershell
-# S'assurer que le venv est activé
-.\venv\Scripts\python -m src.main
-```
-*L'API est configurée sur le port **8000**. Documentation Swagger disponible sur `http://localhost:8000/docs`.*
+### 2. Lancement des services
+Le projet utilise une configuration à deux ports pour séparer les services.
 
-### 4. Lancement du Frontend (Dashboard HTML)
-L'interface utilise des fichiers locaux (JSON, GeoJSON) et nécessite donc un serveur local.
+**Fenêtre 1 : Backend (API)**
+```powershell
+.\venv\Scripts\python -m uvicorn src.main:app --port 8000 --reload
+```
+*Doc Swagger accessible sur : http://localhost:8000/docs*
+
+**Fenêtre 2 : Frontend (Interface)**
 ```powershell
 cd dashboard/ui_mockup
 python -m http.server 8080
 ```
-*Ouvrez votre navigateur sur : `http://localhost:8080`*
+*Interface accessible sur : [http://localhost:8080](http://localhost:8080)*
 
-> [!NOTE]
-> Le dashboard est configuré pour communiquer avec l'API sur `http://localhost:8000/predict/stage`.
+---
 
-## Dépannage
-Si le modèle ne se charge pas (`model_loaded: false` dans `/health/`), vérifiez que les dépendances suivantes sont bien installées :
-- `imbalanced-learn`
-- `catboost`
-- `xgboost`
+## 📁 Structure du Projet
 
-Ces bibliothèques sont essentielles car le modèle de prédiction (`.joblib`) les utilise pour désérialiser le pipeline de stacking.
+```text
+ai4cdk/
+├── src/                    # Code source de l'API
+│   ├── routes/             # Endpoints (Health, Predictions)
+│   ├── services/           # Logique métier et Scoring
+│   └── assets/             # Modèles ML et encodeurs
+├── dashboard/              # Interface utilisateur
+│   └── ui_mockup/          # HTML/CSS/JS statique
+├── ai4ckd.db               # Base de données locale (SQLite)
+└── requirements.txt        # Dépendances Python
+```
 
-## Structure du Projet
-- `src/` : API FastAPI (Routes, Services, Modèles).
-- `src/assets/` : Artefacts du modèle ML (`renal_stacking_pipeline_v3.joblib`, `label_encoder_v3.joblib`).
-- `dashboard/ui_mockup/` : Interface web et données cartographiques.
-- `requirements.txt` : Dépendances Python complètes.
+---
 
-## Technologies Utilisées
-- **Backend** : FastAPI, Pydantic, SQLAlchemy, Scikit-learn, XGBoost, CatBoost, Imbalanced-learn.
-- **Frontend** : HTML5, Vanilla CSS, JavaScript, Leaflet.js, Chart.js.
+## 👨‍💻 Développé pour le Hackathon IA Bénin 2025
+*Ce projet est un prototype fonctionnel destiné à illustrer le potentiel de l'IA dans la gestion de la santé rénale.*
