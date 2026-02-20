@@ -95,5 +95,5 @@ ai4cdk/
 
 ---
 
-## 👨‍💻 Développé pour le Hackathon IA Bénin 2025
+## 👨‍💻 Développé pour le bootcamp AMA 2025
 *Ce projet est un prototype fonctionnel destiné à illustrer le potentiel de l'IA dans la gestion de la santé rénale.*
